@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Three.js</title>
+    <style>
+      body {
+        margin: 0;
+      }
+      canvas {
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <script src="./three/build/three.js"></script>
+    <script src="./three/examples/js/controls/OrbitControls.js"></script>
+
+    <!-- <script src="/three/src/extras/ImageUtils.js"></script> -->
+    <script type="module">
+      import * as THREE from " ./three/build/three.module.js";
+
+      //   import { OrbitControls } from "./three/examples/js/controls/OrbitControls.js";
+      import { GLTFLoader } from "./three/examples/jsm/loaders/GLTFLoader.js";
+      import { RGBELoader } from "./three/examples/jsm/loaders/RGBELoader.js";
+      import { RoughnessMipmapper } from "./three/examples/jsm/utils/RoughnessMipmapper.js";
+    </script>
+
+    <script>
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(
+        70,
+        window.innerWidth / window.innerHeight,
+        0.1,
+        1000
+      );
+      const renderer = new THREE.WebGLRenderer({ antialias: true });
+
+      function initRender() {
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setClearColor(0xeeeeee);
+        renderer.shadowMap.enabled = true; //Tell the renderer that a shadow effect is needed
+        document.body.appendChild(renderer.domElement);
+      }
+
+      function initCamera() {
+        camera.position.set(0, 2, 2);
+      }
+
+      function initScene() {
+        scene.background = new THREE.Color(0xeeeeee);
+        scene.fog = new THREE.Fog(0xeeeeee, 5, 50);
+      }
+
+      //Initialize dat.GUI to simplify the test process
+      function initGui() {
+        //Declare an object that holds the relevant data that needs to be modified
+        gui = {
+          normalScale: 1,
+          animation: false,
+          changeTexture: function () {
+            var image = new Image();
+            image.src = "/lib/textures/crate.gif";
+            image.onload = function (ev) {
+              var texture = new THREE.Texture(image);
+              texture.needsUpdate = true;
+              cube1.material.map = texture;
+
+              //Switch the texture and use three.js to automatically generate normal maps
+              var normal = new THREE.Texture(
+                THREE.ImageUtils.getNormalMap(image)
+              );
+              normal.needsUpdate = true;
+              cube1.material.normalMap = normal;
+
+              //Replace the texture of the second cube
+              cube2.material.map = texture;
+            };
+          },
+        };
+        var datGui = new dat.GUI();
+        //Add the setting attribute to the gui, gui.add(object, attribute, minimum value, maximum value)
+        datGui.add(gui, "normalScale", -2, 30).onChange(function (e) {
+          cube1.material.normalScale.set(e, e);
+          cube1.material.needsUpdate = true;
+        });
+
+        datGui.add(gui, "animation");
+
+        datGui.add(gui, "changeTexture");
+      }
+
+      function createBoxWithRoundedEdges(
+        width,
+        height,
+        depth,
+        radius0,
+        smoothness
+      ) {
+        let shape = new THREE.Shape();
+        let eps = 0.00001;
+        let radius = radius0 - eps;
+        shape.absarc(eps, eps, eps, -Math.PI / 2, -Math.PI, true);
+        shape.absarc(eps, height - radius * 2, eps, Math.PI, Math.PI / 2, true);
+        shape.absarc(
+          width - radius * 2,
+          height - radius * 2,
+          eps,
+          Math.PI / 2,
+          0,
+          true
+        );
+        shape.absarc(width - radius * 2, eps, eps, 0, -Math.PI / 2, true);
+        let geometry = new THREE.ExtrudeBufferGeometry(shape, {
+          amount: depth - radius0 * 2,
+          bevelEnabled: true,
+          bevelSegments: smoothness * 2,
+          steps: 1,
+          bevelSize: radius,
+          bevelThickness: radius0,
+          curveSegments: smoothness,
+        });
+
+        geometry.center();
+
+        return geometry;
+      }
+
+      function initModel() {
+        // // Floor
+        // var mesh = new THREE.Mesh(
+        //   new THREE.PlaneBufferGeometry(200, 200),
+        //   new THREE.MeshPhongMaterial({ color: 0xffffff, depthWrite: false })
+        // );
+        // mesh.rotation.x = -Math.PI / 2;
+        // mesh.receiveShadow = true;
+        // scene.add(mesh);
+
+        //Add two contrast models, one adds bump map texture
+
+        const bump = new THREE.TextureLoader().load("./rice-normal.jpg");
+
+        const normal = new THREE.TextureLoader().load("./rice2.jpg");
+
+        const bump2 = new THREE.TextureLoader().load("./salmon-normal.jpg");
+
+        const normal2 = new THREE.TextureLoader().load("./salmon.jpg");
+
+        // Pattern size
+        normal.wrapS = THREE.RepeatWrapping;
+        normal.wrapT = THREE.RepeatWrapping;
+        normal.repeat.set(1, 1);
+        bump.wrapS = THREE.RepeatWrapping;
+        bump.wrapT = THREE.RepeatWrapping;
+        bump.repeat.set(1, 1);
+
+        // Pattern size
+        normal2.wrapS = THREE.RepeatWrapping;
+        normal2.wrapT = THREE.RepeatWrapping;
+        normal2.repeat.set(0.5, 1);
+        bump2.wrapS = THREE.RepeatWrapping;
+        bump2.wrapT = THREE.RepeatWrapping;
+        bump2.repeat.set(0.5, 0.5);
+
+        const geometry = createBoxWithRoundedEdges(2, 1, 2, 0.1, 50);
+        // const geometry = new THREE.BoxGeometry(2, 1, 2);
+
+        const geometry2 = createBoxWithRoundedEdges(2.01, 1.01, 2.01, 0.1, 50);
+
+        // const material1 = new THREE.MeshPhongMaterial({
+        //   map: normal,
+        // });
+        const material1 = new THREE.MeshPhongMaterial();
+        material1.normalMap = bump;
+        material1.map = normal;
+
+        const material2 = new THREE.MeshPhongMaterial();
+        material2.normalMap = bump2;
+        material2.map = normal2;
+
+        //Add normal vector map, use default normal vector influence value
+        // material1.normalMap = bump;
+        material1.normalScale.set(1, 1);
+        material2.normalScale.set(2, 2);
+
+        cube1 = new THREE.Mesh(geometry, material1);
+        cube1.position.set(0, 1, -5);
+        cube1.rotation.y += Math.PI / 6;
+        scene.add(cube1);
+
+        //Create graphics without bump texture
+        // var material2 = new THREE.MeshPhongMaterial({
+        //   map: normal,
+        // });
+
+        cube2 = new THREE.Mesh(geometry2, material2);
+        cube2.position.set(0, 2, -5);
+        cube2.rotation.y += Math.PI / 6;
+        scene.add(cube2);
+      }
+
+      function initControls() {
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        //Set the center point of the controller
+        controls.target.set(0, 5, 0);
+        // If using the animate method, delete this function
+        //controls.addEventListener( 'change', render );
+        // Make the animation damp or rotate when it is used in a loop
+        controls.enableDamping = true;
+        //Dynamic damping coefficient is the sensitivity of mouse drag rotation
+        //controls.dampingFactor = 0.25;
+        //Can zoom
+        controls.enableZoom = true;
+        //Whether to rotate automatically
+        controls.autoRotate = false;
+        controls.autoRotateSpeed = 0.5;
+        //Set the furthest distance from the camera to the origin
+        controls.minDistance = 1;
+        //Set the furthest distance from the camera to the origin
+        controls.maxDistance = 2000;
+        //Whether to enable right drag
+        controls.enablePan = true;
+      }
+
+      const light = new THREE.DirectionalLight(0xcccccc);
+      light.position.set(0, 1, 1).normalize();
+      scene.add(light);
+      scene.add(new THREE.AmbientLight(0x747474));
+
+      //   let texture = new THREE.TextureLoader().load("textures/crate.gif");
+      //   let geometry = new THREE.BoxBufferGeometry(100, 100, 100);
+      //   let material = new THREE.MeshBasicMaterial({ map: texture });
+      //   mesh = new THREE.Mesh(geometry, material);
+      //   mesh.position.setZ(50);
+      //   containerObj.add(mesh);
+
+      //   const geometry = new THREE.BoxGeometry();
+      //   const material = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+      //   const cube = new THREE.Mesh(geometry, material);
+      //   scene.add(cube);
+
+      function animate() {
+        requestAnimationFrame(animate);
+
+        // cube.rotation.x += 0.01;
+        cube1.rotation.y += 0.01;
+        cube2.rotation.y += 0.01;
+
+        renderer.render(scene, camera);
+      }
+
+      initScene();
+      initCamera();
+      initRender();
+      initModel();
+      animate();
+      initControls();
+    </script>
+  </body>
+</html>
