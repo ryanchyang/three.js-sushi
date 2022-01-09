@@ -10,17 +10,45 @@
         margin: 0;
       }
       canvas {
-        display: block;
+        display: fixed;
+      }
+      .btn {
+        padding: 10px;
+        position: absolute;
+        top: 50px;
+        left: 50px;
+      }
+      .btn2 {
+        padding: 10px;
+        position: absolute;
+        top: 100px;
+        left: 50px;
+      }
+      .btn3 {
+        padding: 10px;
+        position: absolute;
+        top: 150px;
+        left: 50px;
       }
     </style>
   </head>
   <body>
+    <button
+      class="btn"
+      onclick="addNewSushi('./salmon-normal.jpg','./salmon.jpg');"
+    >
+      Salmon
+    </button>
+    <button class="btn2" onclick="addNewSushi('./egg-normal.jpg','./egg.jpg');">
+      Tamagoyaki
+    </button>
+    <button class="btn3" id="saveLink">Save img</button>
     <script src="./three/build/three.js"></script>
     <script src="./three/examples/js/controls/OrbitControls.js"></script>
 
     <!-- <script src="/three/src/extras/ImageUtils.js"></script> -->
     <script type="module">
-      import * as THREE from " ./three/build/three.module.js";
+      import * as THREE from "./three/build/three.module.js";
 
       //   import { OrbitControls } from "./three/examples/js/controls/OrbitControls.js";
       import { GLTFLoader } from "./three/examples/jsm/loaders/GLTFLoader.js";
@@ -29,6 +57,7 @@
     </script>
 
     <script>
+      var strDownloadMime = "image/octet-stream";
       const scene = new THREE.Scene();
       const camera = new THREE.PerspectiveCamera(
         70,
@@ -36,18 +65,26 @@
         0.1,
         1000
       );
-      const renderer = new THREE.WebGLRenderer({ antialias: true });
+
+      document
+        .getElementById("saveLink")
+        .addEventListener("click", saveAsImage);
+
+      const renderer = new THREE.WebGLRenderer({
+        antialias: true,
+        preserveDrawingBuffer: true,
+      });
 
       function initRender() {
         renderer.setPixelRatio(window.devicePixelRatio);
-        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setSize(window.innerWidth * 0.8, window.innerHeight * 0.8);
         renderer.setClearColor(0xeeeeee);
         renderer.shadowMap.enabled = true; //Tell the renderer that a shadow effect is needed
         document.body.appendChild(renderer.domElement);
       }
 
       function initCamera() {
-        camera.position.set(0, 2, 2);
+        camera.position.set(0, 0, 4);
       }
 
       function initScene() {
@@ -145,10 +182,6 @@
 
         const normal = new THREE.TextureLoader().load("./rice2.jpg");
 
-        const bump2 = new THREE.TextureLoader().load("./salmon-normal.jpg");
-
-        const normal2 = new THREE.TextureLoader().load("./salmon.jpg");
-
         // Pattern size
         normal.wrapS = THREE.RepeatWrapping;
         normal.wrapT = THREE.RepeatWrapping;
@@ -157,18 +190,8 @@
         bump.wrapT = THREE.RepeatWrapping;
         bump.repeat.set(1, 1);
 
-        // Pattern size
-        normal2.wrapS = THREE.RepeatWrapping;
-        normal2.wrapT = THREE.RepeatWrapping;
-        normal2.repeat.set(0.5, 1);
-        bump2.wrapS = THREE.RepeatWrapping;
-        bump2.wrapT = THREE.RepeatWrapping;
-        bump2.repeat.set(0.5, 0.5);
-
         const geometry = createBoxWithRoundedEdges(2, 1, 2, 0.1, 50);
         // const geometry = new THREE.BoxGeometry(2, 1, 2);
-
-        const geometry2 = createBoxWithRoundedEdges(2.01, 1.01, 2.01, 0.1, 50);
 
         // const material1 = new THREE.MeshPhongMaterial({
         //   map: normal,
@@ -177,17 +200,12 @@
         material1.normalMap = bump;
         material1.map = normal;
 
-        const material2 = new THREE.MeshPhongMaterial();
-        material2.normalMap = bump2;
-        material2.map = normal2;
-
         //Add normal vector map, use default normal vector influence value
         // material1.normalMap = bump;
         material1.normalScale.set(1, 1);
-        material2.normalScale.set(2, 2);
 
         cube1 = new THREE.Mesh(geometry, material1);
-        cube1.position.set(0, 1, -5);
+        cube1.position.set(0, -2, -5);
         cube1.rotation.y += Math.PI / 6;
         scene.add(cube1);
 
@@ -195,9 +213,34 @@
         // var material2 = new THREE.MeshPhongMaterial({
         //   map: normal,
         // });
+      }
+
+      let layer = 0;
+
+      function addNewSushi(imgN, img) {
+        layer += 0.5;
+
+        const bump2 = new THREE.TextureLoader().load(imgN);
+
+        const normal2 = new THREE.TextureLoader().load(img);
+
+        // Pattern size
+        normal2.wrapS = THREE.RepeatWrapping;
+        normal2.wrapT = THREE.RepeatWrapping;
+        normal2.repeat.set(1, 1);
+        bump2.wrapS = THREE.RepeatWrapping;
+        bump2.wrapT = THREE.RepeatWrapping;
+        bump2.repeat.set(1, 1);
+
+        const material2 = new THREE.MeshPhongMaterial();
+        material2.normalMap = bump2;
+        material2.map = normal2;
+        material2.normalScale.set(2, 2);
+
+        const geometry2 = createBoxWithRoundedEdges(2.01, 0.51, 2.01, 0.1, 50);
 
         cube2 = new THREE.Mesh(geometry2, material2);
-        cube2.position.set(0, 2, -5);
+        cube2.position.set(0, -1.8 + layer, -5);
         cube2.rotation.y += Math.PI / 6;
         scene.add(cube2);
       }
@@ -205,7 +248,7 @@
       function initControls() {
         const controls = new THREE.OrbitControls(camera, renderer.domElement);
         //Set the center point of the controller
-        controls.target.set(0, 5, 0);
+        controls.target.set(0, 0, 0);
         // If using the animate method, delete this function
         //controls.addEventListener( 'change', render );
         // Make the animation damp or rotate when it is used in a loop
@@ -215,12 +258,14 @@
         //Can zoom
         controls.enableZoom = true;
         //Whether to rotate automatically
+        controls.rotateSpeed = 0.3;
+
         controls.autoRotate = false;
         controls.autoRotateSpeed = 0.5;
         //Set the furthest distance from the camera to the origin
         controls.minDistance = 1;
         //Set the furthest distance from the camera to the origin
-        controls.maxDistance = 2000;
+        controls.maxDistance = 10;
         //Whether to enable right drag
         controls.enablePan = true;
       }
@@ -242,12 +287,39 @@
       //   const cube = new THREE.Mesh(geometry, material);
       //   scene.add(cube);
 
+      function saveAsImage() {
+        var imgData, imgNode;
+
+        try {
+          var strMime = "image/jpeg";
+          imgData = renderer.domElement.toDataURL(strMime);
+
+          saveFile(imgData.replace(strMime, strDownloadMime), "test.jpg");
+        } catch (e) {
+          console.log(e);
+          return;
+        }
+      }
+
+      var saveFile = function (strData, filename) {
+        var link = document.createElement("a");
+        if (typeof link.download === "string") {
+          document.body.appendChild(link); //Firefox requires the link to be in the body
+          link.download = filename;
+          link.href = strData;
+          link.click();
+          document.body.removeChild(link); //remove the link when done
+        } else {
+          location.replace(uri);
+        }
+      };
+
       function animate() {
         requestAnimationFrame(animate);
 
         // cube.rotation.x += 0.01;
-        cube1.rotation.y += 0.01;
-        cube2.rotation.y += 0.01;
+        // cube1.rotation.y += 0.01;
+        // cube2.rotation.y += 0.01;
 
         renderer.render(scene, camera);
       }
@@ -256,8 +328,9 @@
       initCamera();
       initRender();
       initModel();
-      animate();
       initControls();
+      addNewSushi("./egg-normal.jpg", "./egg.jpg");
+      animate();
     </script>
   </body>
 </html>
