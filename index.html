@@ -44,19 +44,25 @@
     </button>
     <button class="btn3" id="saveLink">Save img</button>
     <script src="./three/build/three.js"></script>
-    <script src="./three/examples/js/controls/OrbitControls.js"></script>
+    <!-- <script src="./three/examples/js/controls/OrbitControls.js"></script> -->
+    <!-- <script src="./three/examples/jsm/loaders/FBXLoader.js"></script> -->
 
     <!-- <script src="/three/src/extras/ImageUtils.js"></script> -->
+    <script type="module"></script>
+
     <script type="module">
       import * as THREE from "./three/build/three.module.js";
-
-      //   import { OrbitControls } from "./three/examples/js/controls/OrbitControls.js";
+      import { OrbitControls } from "./three/examples/jsm/controls/OrbitControls.js";
       import { GLTFLoader } from "./three/examples/jsm/loaders/GLTFLoader.js";
       import { RGBELoader } from "./three/examples/jsm/loaders/RGBELoader.js";
-      import { RoughnessMipmapper } from "./three/examples/jsm/utils/RoughnessMipmapper.js";
-    </script>
 
-    <script>
+      import { FBXLoader } from "./three/examples/jsm/loaders/FBXLoader.js";
+      import { RoughnessMipmapper } from "./three/examples/jsm/utils/RoughnessMipmapper.js";
+      const w = 1920;
+      const h = 1080;
+      const fullWidth = w * 3;
+      const fullHeight = h * 1.2;
+
       var strDownloadMime = "image/octet-stream";
       const scene = new THREE.Scene();
       const camera = new THREE.PerspectiveCamera(
@@ -69,6 +75,29 @@
       document
         .getElementById("saveLink")
         .addEventListener("click", saveAsImage);
+
+      const fbxLoader = new FBXLoader();
+      fbxLoader.load(
+        "./rice.fbx",
+        (object) => {
+          // object.traverse(function (child) {
+          //     if ((child as THREE.Mesh).isMesh) {
+          //         // (child as THREE.Mesh).material = material
+          //         if ((child as THREE.Mesh).material) {
+          //             ((child as THREE.Mesh).material as THREE.MeshBasicMaterial).transparent = false
+          //         }
+          //     }
+          // })
+          // object.scale.set(.01, .01, .01)
+          scene.add(object);
+        },
+        (xhr) => {
+          console.log((xhr.loaded / xhr.total) * 100 + "% loaded");
+        },
+        (error) => {
+          console.log(error);
+        }
+      );
 
       const renderer = new THREE.WebGLRenderer({
         antialias: true,
@@ -84,7 +113,9 @@
       }
 
       function initCamera() {
-        camera.position.set(0, 0, 4);
+        camera.position.set(0, 1, 4);
+        camera.setViewOffset(fullWidth, fullHeight, w * 1, h * 0, w, h);
+        scene.add(camera);
       }
 
       function initScene() {
@@ -178,20 +209,34 @@
 
         //Add two contrast models, one adds bump map texture
 
-        const bump = new THREE.TextureLoader().load("./rice-normal.jpg");
+        const bump = new THREE.TextureLoader().load(
+          "./food_0013_normal_8k.jpg"
+        );
 
-        const normal = new THREE.TextureLoader().load("./rice2.jpg");
+        const normal = new THREE.TextureLoader().load(
+          "./food_0013_color_8k.jpg"
+        );
+
+        const displacement = new THREE.TextureLoader().load(
+          "./food_0013_height_8k.jpg"
+        );
+
+        const ambient = new THREE.TextureLoader().load("./food_0013_ao_8k.jpg");
+
+        const roughness = new THREE.TextureLoader().load(
+          "./food_0013_roughness_8k.jpg"
+        );
 
         // Pattern size
         normal.wrapS = THREE.RepeatWrapping;
         normal.wrapT = THREE.RepeatWrapping;
-        normal.repeat.set(1, 1);
+        normal.repeat.set(0.25, 0.25);
         bump.wrapS = THREE.RepeatWrapping;
         bump.wrapT = THREE.RepeatWrapping;
-        bump.repeat.set(1, 1);
+        bump.repeat.set(0.25, 0.25);
 
-        const geometry = createBoxWithRoundedEdges(2, 1, 2, 0.1, 50);
-        // const geometry = new THREE.BoxGeometry(2, 1, 2);
+        const geometry = createBoxWithRoundedEdges(2, 1, 2, 0.1, 10);
+        // const geometry = new THREE.BoxGeometry(2, 1, 2, 30, 30, 30);
 
         // const material1 = new THREE.MeshPhongMaterial({
         //   map: normal,
@@ -199,13 +244,17 @@
         const material1 = new THREE.MeshPhongMaterial();
         material1.normalMap = bump;
         material1.map = normal;
+        material1.aoMap = ambient;
+        // material1.displacementMap = displacement;
 
+        // material1.displacementScale = 0.1;
+        // material1.displacementBias = -0.1;
         //Add normal vector map, use default normal vector influence value
         // material1.normalMap = bump;
-        material1.normalScale.set(1, 1);
+        material1.normalScale.set(1.2, 1.2);
 
-        cube1 = new THREE.Mesh(geometry, material1);
-        cube1.position.set(0, -2, -5);
+        const cube1 = new THREE.Mesh(geometry, material1);
+        cube1.position.set(0, 0, 0);
         cube1.rotation.y += Math.PI / 6;
         scene.add(cube1);
 
@@ -235,40 +284,17 @@
         const material2 = new THREE.MeshPhongMaterial();
         material2.normalMap = bump2;
         material2.map = normal2;
-        material2.normalScale.set(2, 2);
+        material2.normalScale.set(1.5, 1.5);
 
-        const geometry2 = createBoxWithRoundedEdges(2.01, 0.51, 2.01, 0.1, 50);
+        const geometry2 = createBoxWithRoundedEdges(2, 0.5, 2, 0.1, 50);
 
         cube2 = new THREE.Mesh(geometry2, material2);
-        cube2.position.set(0, -1.8 + layer, -5);
+        cube2.position.set(0, 0.5 + layer, 0);
         cube2.rotation.y += Math.PI / 6;
         scene.add(cube2);
       }
 
-      function initControls() {
-        const controls = new THREE.OrbitControls(camera, renderer.domElement);
-        //Set the center point of the controller
-        controls.target.set(0, 0, 0);
-        // If using the animate method, delete this function
-        //controls.addEventListener( 'change', render );
-        // Make the animation damp or rotate when it is used in a loop
-        controls.enableDamping = true;
-        //Dynamic damping coefficient is the sensitivity of mouse drag rotation
-        //controls.dampingFactor = 0.25;
-        //Can zoom
-        controls.enableZoom = true;
-        //Whether to rotate automatically
-        controls.rotateSpeed = 0.3;
-
-        controls.autoRotate = false;
-        controls.autoRotateSpeed = 0.5;
-        //Set the furthest distance from the camera to the origin
-        controls.minDistance = 1;
-        //Set the furthest distance from the camera to the origin
-        controls.maxDistance = 10;
-        //Whether to enable right drag
-        controls.enablePan = true;
-      }
+      const controls = new OrbitControls(camera, renderer.domElement);
 
       const light = new THREE.DirectionalLight(0xcccccc);
       light.position.set(0, 1, 1).normalize();
@@ -316,11 +342,10 @@
 
       function animate() {
         requestAnimationFrame(animate);
-
+        controls.update();
         // cube.rotation.x += 0.01;
         // cube1.rotation.y += 0.01;
         // cube2.rotation.y += 0.01;
-
         renderer.render(scene, camera);
       }
 
@@ -328,8 +353,9 @@
       initCamera();
       initRender();
       initModel();
-      initControls();
-      addNewSushi("./egg-normal.jpg", "./egg.jpg");
+
+      // initControls();
+      // addNewSushi("./egg-normal.jpg", "./egg.jpg");
       animate();
     </script>
   </body>
